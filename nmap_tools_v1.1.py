@@ -1,27 +1,20 @@
 import csv
+import time
 import sys
 from xml.etree.ElementTree import XML
 import requests
 import datetime
+from concurrent.futures import ThreadPoolExecutor
 from bs4 import BeautifulSoup as bs
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-import xlsxwriter
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import xml.etree.ElementTree as ET
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-time = datetime.datetime.now().strftime('%Y-%m-%d')
-print(time)
-
-
-
-
-            
-
-
-
+Time = datetime.datetime.now().strftime('%Y-%m-%d')
+#print(Time)
 
 def GetFile(path):  # 获取文件
     Date_list = []
@@ -52,27 +45,18 @@ def GetFile(path):  # 获取文件
             if serv == "":
                 serv == "未知"
             #print(state,portid,serv)
-           
+            ports.append({'IP':address,'PORT':portid,'STATUS':state,'SERVICE':serv})
+        return(ports)
 
-            code,title = GetTitle(address,portid)
-
-            #ports.append([portid,state,serv,code,title])
-        
-            Date_list.append({'IP':address,'PORT':portid,'STATUS':state,'SERVICE':serv,'CODE':code,'TITLE':title})
-        MkdirFile(Date_list)  
-        #print(Date_list)
+              
 
 def MkdirFile(Date_list):
-    with open(time+'.csv','w',newline='') as csvf:
+    with open(Time+'.csv','w',newline='') as csvf:
         fieldnames = ['IP','PORT','STATUS','SERVICE','CODE','TITLE']
         writer = csv.DictWriter(csvf,fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(Date_list)
-
-            
-                    
-
-
+        print("文件输出成功！")
 
 def GetTitle(ip,port):
     MyUa = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"
@@ -102,13 +86,36 @@ def GetTitle(ip,port):
     except:
         print("http://"+ip+":"+port+"  Network Error!")
         title = "Network Error!"
-        code = ''
+        code = '无'
         return(code,title)
 
+def main():
+    if len(sys.argv) != 2:
+        print("----------------USEAGE:python3 nmap_tools path -----------------")
+        sys.exit()
+    path = sys.argv[1]
+    #GetFile(path)
+    #T = int(sys.argv[2])
+    start_time = time.time()
+    
+    port = GetFile(path)
+
+    #print(port)
+    for j in port:
+        a = j['IP']
+        b = j['PORT']
+        code,title = GetTitle(a,b)
+        NewKey1 = 'CODE'
+        NewKey2 = 'TITLE'
+        j[NewKey1] = code
+        j[NewKey2] = title
+
+    #print(port)
+    MkdirFile(port)
+
+    print("用时:%s second"%(time.time() - start_time) )
+
+if __name__ == '__main__':
+    main()
 
 
-if len(sys.argv) != 2:
-    print("----------------USEAGE:python3 nmap_tools path-----------------")
-    sys.exit()
-path = sys.argv[1]
-GetFile(path)
