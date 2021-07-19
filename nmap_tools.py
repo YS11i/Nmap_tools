@@ -1,7 +1,11 @@
-import re
+import csv
+import time
 import sys
 import requests
 import datetime
+import threading
+import threadpool
+from concurrent.futures import ThreadPoolExecutor,as_completed
 from bs4 import BeautifulSoup as bs
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 try:
@@ -10,72 +14,119 @@ except ImportError:
     import xml.etree.ElementTree as ET
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-time = datetime.datetime.now().strftime('%Y-%m-%d')
-print(time)
-f = open(time + '.csv', 'a')
-
+Time = datetime.datetime.now().strftime('%Y-%m-%d')
+#print(Time)
+CODE = []
 
 def GetFile(path):  # 获取文件
-    tree = ET.parse(path)
-    root = tree.getroot()
-    # print(root)
-    # print(Item)
-    ip_list = []
-    for host in root.findall('host'):
-        # print(host)
-        if host[0].get('state') == "up":  # 判断第一个host中第一个state是否为up
-            ip = host[1].get('addr')
-            print(ip)
-            ip_list.append(ip)
-            Line_ip = ip
-            f.writelines(Line_ip)
-            # print(host[3][1:])
-            for port in host[3][1:]:
-                # print(port.get('portid'))
-                Line_portid = str(port.get('portid'))
-                GetTitle(Line_ip,Line_portid)
-
-
-
-def GetTitle(ip,port):
-    # MyUa = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"
-
     try:
-        Myurl = "http://"+ip+":"+port
-        headers = {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36",
-        'Connection': 'close'}
-        r = requests.get(url=Myurl, verify=False, headers=headers, timeout=3)
+        tree = ET.parse(path)
+        root = tree.getroot()
+        #print(root.tag)
+        # print(Item)
+    except Exception as e:
+        print(e)
+        return {}
+    ports = []
+    for host in root.findall('host'):
+        
+        if host.find('status').get('state') == 'down':
+            continue
+        #print(host)
+        address = host.find('address').get('addr',None)
+        #print(address)
+        if not address:
+            continue
+        
+        
+        for port in host.iter('port'):
+            state = port.find('state').get('state','')
+            portid = port.get('portid',None)
+            serv = port.find('service')
+            serv = serv.get('name')
+            if serv == "":
+                serv == "未知"
+            #print(state,portid,serv)
+            ports.append({'IP':address,'PORT':portid,'STATUS':state,'SERVICE':serv})
+    return(ports)             
+
+def MkdirFile(Date_list):
+    with open(Time+'.csv','w',newline='') as csvf:
+        fieldnames = ['IP','PORT','STATUS','SERVICE','CODE','TITLE']
+        writer = csv.DictWriter(csvf,fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(Date_list)
+        print("文件输出成功！")
+
+def GetTitle(url): 
+    MyUa = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"   
+    try:
+        headers = {'User-Agent': MyUa,'Connection': 'close'}
+        r = requests.get(url=url, verify=False, headers=headers, timeout=5)
         soup = bs(r.text.encode('utf-8'), 'html.parser')
         title = soup.find('title').text
         #print(r.status_code)
-        if r.status_code == 200 and soup != "":
-            print(Myurl + " It is Web title:" + title)
-            f.writelines(r.status_code)
-            f.writelines(title)
-        elif r.status_code == 400:
-            Myurl2 = "https://"+ip+":"+port
-            headers = {
-                'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36",
-                'Connection': 'close'}
-            r = requests.get(url=Myurl2, verify=False, headers=headers, timeout=3)
+        code = r.status_code
+        if code != 400 and soup != "":
+            print(url + " It is Web title:" + title)
+            CODE.append({'CODE':code,'TITLE':title})
+            return(CODE)
+        elif code == 400:
+            url2 = "https://"+url.strip('http://')
+            headers = {'User-Agent': MyUa,'Connection': 'close'}
+            r = requests.get(url=url2, verify=False, headers=headers, timeout=5)
             soup = bs(r.text.encode('utf-8'), 'html.parser')
             title = soup.find('title').text
-            print(Myurl2 + " It is Web title:" + title)
-            f.writelines(r.status_code)
-            f.writelines(title)
+            print(url2 + " It is Web title:" + title)
+
+            CODE.append({'CODE':code,'TITLE':title})
+            return(CODE)
 
         else:
-            print(r.status_code)
-            f.writelines(r.status_code)
-            f.writelines(title)
+            CODE.append({'CODE':code,'TITLE':title})
+            return(CODE)
+            
     except:
-        print("Network Error!")
-        f.writelines("Network Error!")
+        title = "Network Error!"
+        code = '无'
+        CODE.append({'CODE':code,'TITLE':title})
+        print(url+"  "+code+"  Network Error!")
+        return(CODE)
 
 
-if len(sys.argv) != 2:
-    print("----------------USEAGE:python3 nmap_tools path-----------------")
-    sys.exit()
-path = sys.argv[1]
-GetFile(path)
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+            print("----------------USEAGE:python3 nmap_tools path threads-----------------")
+            print("----------------example:python3 nmap_tools 1.xml 10--------------------")
+            sys.exit()
+    path = sys.argv[1]
+    start_time = time.time()
+    T = int(sys.argv[2])
+    MyUrl = GetFile(path)
+    url = []
+    for u in MyUrl:
+        a = u['IP']
+        b = u['PORT']
+        c = u['STATUS']
+        d = u['SERVICE']
+        url.append("http://"+a+":"+b)
+    #print(url)
+   
+    pool = threadpool.ThreadPool(T)
+    threading = threadpool.makeRequests(GetTitle,url)
+    [pool.putRequest(req) for req in threading]
+    pool.wait()
+    N = 0
+    for d in MyUrl:
+    #print(d)
+        key1 = 'CODE'
+        key2 = 'TITLE'
+        c1 = CODE[N]['CODE']
+        c2 = CODE[N]['TITLE']
+        #print(c1,c2)
+        d[key1] = c1
+        d[key2] = c2
+        N += 1
+    #print(MyUrl)
+    MkdirFile(MyUrl)
+    print("用时:%s second"%(time.time() - start_time) )
