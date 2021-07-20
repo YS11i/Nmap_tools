@@ -5,7 +5,6 @@ import requests
 import datetime
 import threading
 import threadpool
-from concurrent.futures import ThreadPoolExecutor,as_completed
 from bs4 import BeautifulSoup as bs
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 try:
@@ -52,7 +51,7 @@ def GetFile(path):  # 获取文件
 
 def MkdirFile(Date_list):
     with open(Time+'.csv','w',newline='') as csvf:
-        fieldnames = ['IP','PORT','STATUS','SERVICE','CODE','TITLE']
+        fieldnames = ['IP','PORT','STATUS','SERVICE','URL','CODE','TITLE']
         writer = csv.DictWriter(csvf,fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(Date_list)
@@ -69,7 +68,7 @@ def GetTitle(url):
         code = r.status_code
         if code != 400 and soup != "":
             print(url + " It is Web title:" + title)
-            CODE.append({'CODE':code,'TITLE':title})
+            CODE.append({'URL':url,'CODE':code,'TITLE':title})
             return(CODE)
         elif code == 400:
             url2 = "https://"+url.strip('http://')
@@ -79,17 +78,17 @@ def GetTitle(url):
             title = soup.find('title').text
             print(url2 + " It is Web title:" + title)
 
-            CODE.append({'CODE':code,'TITLE':title})
+            CODE.append({'URL':url2,'CODE':code,'TITLE':title})
             return(CODE)
 
         else:
-            CODE.append({'CODE':code,'TITLE':title})
+            CODE.append({'URL':url,'CODE':code,'TITLE':title})
             return(CODE)
             
     except:
         title = "Network Error!"
         code = '无'
-        CODE.append({'CODE':code,'TITLE':title})
+        CODE.append({'URL':url,'CODE':code,'TITLE':title})
         print(url+"  "+code+"  Network Error!")
         return(CODE)
 
@@ -119,13 +118,16 @@ if __name__ == '__main__':
     N = 0
     for d in MyUrl:
     #print(d)
-        key1 = 'CODE'
-        key2 = 'TITLE'
-        c1 = CODE[N]['CODE']
-        c2 = CODE[N]['TITLE']
+        key1 = 'URL'
+        key2 = 'CODE'
+        key3 = 'TITLE'
+        c1 = CODE[N]['URL']
+        c2 = CODE[N]['CODE']
+        c3 = CODE[N]['TITLE']
         #print(c1,c2)
         d[key1] = c1
         d[key2] = c2
+        d[key3] = c3
         N += 1
     #print(MyUrl)
     MkdirFile(MyUrl)
