@@ -77,7 +77,7 @@ def GetTitle(url):
             soup = bs(r.text.encode('utf-8'), 'html.parser')
             title = soup.find('title').text
             print(url2 + " It is Web title:" + title)
-
+            code = r.status_code
             CODE.append({'URL':url2,'CODE':code,'TITLE':title})
             return(CODE)
 
