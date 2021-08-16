@@ -61,25 +61,36 @@ def GetTitle(url):
     MyUa = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"   
     try:
         headers = {'User-Agent': MyUa,'Connection': 'close'}
-        r = requests.get(url=url, verify=False, headers=headers, timeout=5)
+        r = requests.get(url=url, verify=False, headers=headers, timeout=10)
         soup = bs(r.text.encode('utf-8'), 'html.parser')
-        title = soup.find('title').text
-        #print(r.status_code)
         code = r.status_code
+        if soup.title:
+            title = str(soup.title.string)
+            #print(title)
+        else:
+            title = "Web存在但无标题"    
+        #print(r.status_code)        
         if code != 400 and soup != "":
             print(url + " ------ 发现Web ------ title:" + title)
             CODE.append({'URL':url,'CODE':code,'TITLE':title})
             return(CODE)
         elif code == 400:
-            url2 = "https://"+url.strip('http://')
+            url = "https://"+url.strip('http://')
+            #print(url)
             headers = {'User-Agent': MyUa,'Connection': 'close'}
-            r = requests.get(url=url2, verify=False, headers=headers, timeout=5)
+            r = requests.get(url=url, verify=False, headers=headers, timeout=10)
             code = r.status_code
             soup = bs(r.text.encode('utf-8'), 'html.parser')
-            title = soup.find('title').text
-            print(url2 + " ------ 发现Web ------ title:" + title)
+            
+            if soup.title:
+                title = str(soup.title.string)
+                #print(title)
+            else:
+                title = "Web存在但无标题"   
+            
+            print(url + " ------ 发现Web ------ title:" + title)
 
-            CODE.append({'URL':url2,'CODE':code,'TITLE':title})
+            CODE.append({'URL':url,'CODE':code,'TITLE':title})
             return(CODE)
 
         else:
