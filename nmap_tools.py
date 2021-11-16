@@ -41,8 +41,14 @@ def GetFile(path):  # 获取文件
         for port in host.iter('port'):
             state = port.find('state').get('state','')
             portid = port.get('portid',None)
-            serv = port.find('service')
-            serv = serv.get('name')
+            #print(address,portid)
+            try:
+                serv = port.find('service').get('name','')
+                #serv = serv.get('name')
+                #print(serv)
+            except:
+                continue
+
             if serv == "":
                 serv == "未知"
             #print(state,portid,serv)
