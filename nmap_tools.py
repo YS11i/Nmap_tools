@@ -73,7 +73,8 @@ def GetTitle(url):
         title = "Network Error!"
         code = 'NONE'
         CODE.append({'URL':url,'CODE':code,'TITLE':title})
-        print(url+" ------ "+"请求失败"+" ------ Network Error!")
+        #print(url+" ------ "+"请求失败"+" ------ Network Error!")
+        print("{:<40s}请求失败{:<20s}{:>20s}".format(url,"","Network Error!"))
         return(CODE)
 
     if r.apparent_encoding != None:
@@ -91,7 +92,8 @@ def GetTitle(url):
         title = "Web存在但无标题"    
     #print(r.status_code)        
     if code != 400 and soup != "":
-        print(url + " ------ 发现Web ------ title:" + title)
+        #print(url + " ------ 发现Web ------ title:" + title)
+        print("{:<40s}发现Web{:>20s}title:{:<40s}".format(url,"",title))
         CODE.append({'URL':url,'CODE':code,'TITLE':title})
         return(CODE)
     elif code == 400:
@@ -108,7 +110,7 @@ def GetTitle(url):
         else:
             title = "Web存在但无标题"   
         
-        print(url + " ------ 发现Web ------ title:" + title)
+        print("{:<40s}发现Web{:>20s}title:{:<40s}".format(url,"",title))
 
         CODE.append({'URL':url,'CODE':code,'TITLE':title})
         return(CODE)
